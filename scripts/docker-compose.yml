@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  coordinator:
+    image: citusdata/citus:12.1
+    container_name: citus_coordinator
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_PASSWORD: password
+
+  worker1:
+    image: citusdata/citus:12.1
+    container_name: citus_worker1
+    environment:
+      POSTGRES_PASSWORD: password
+
+  worker2:
+    image: citusdata/citus:12.1
+    container_name: citus_worker2
+    environment:
+      POSTGRES_PASSWORD: password

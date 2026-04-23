@@ -1,0 +1,2 @@
+SELECT * FROM trips LIMIT 10;
+SELECT * FROM vehicles LIMIT 10;
