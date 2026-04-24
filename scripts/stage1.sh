@@ -2,11 +2,19 @@
 
 rm -rf output/
 
-echo "Downloading Dataset from Yandex Disk..."
-bash scripts/data_collection.sh
+if [-f "data/VED_171101_week.csv"]; then
+    echo "Dataset already Loaded.. Skipping this part"
+else
+    echo "Downloading Dataset from Yandex Disk..."
+    bash scripts/data_collection.sh
+fi
 
-echo "Preprocessing Data abount Vehicles..."
-python scripts/preprocess_dataset.py
+if [-f "data/vehicles.csv"]; then
+    echo "Data already preprocessed.. Skipping this part"
+else
+    echo "Preprocessing Data abount Vehicles..."
+    python scripts/preprocess_dataset.py
+fi
 
 echo "Building Database in PostgreSQL server..."
 python scripts/build_projectdb.py
