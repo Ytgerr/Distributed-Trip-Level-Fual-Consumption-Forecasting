@@ -2,14 +2,14 @@
 
 rm -rf output/
 
-if [-f "data/VED_171101_week.csv"]; then
+if [ -f "data/VED_171101_week.csv" ]; then
     echo "Dataset already Loaded.. Skipping this part"
 else
     echo "Downloading Dataset from Yandex Disk..."
     bash scripts/data_collection.sh
 fi
 
-if [-f "data/vehicles.csv"]; then
+if [ -f "data/vehicles.csv" ]; then
     echo "Data already preprocessed.. Skipping this part"
 else
     echo "Preprocessing Data abount Vehicles..."
