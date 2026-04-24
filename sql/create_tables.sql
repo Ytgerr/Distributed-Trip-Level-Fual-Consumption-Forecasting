@@ -9,9 +9,9 @@ CREATE TABLE IF NOT EXISTS vehicles (
     vehclass TEXT,
     transmission TEXT,
     drive_wheels TEXT,
-    gen_weight NUMERIC,
+    gen_weight DOUBLE PRECISION,
     eng_type TEXT,
-    eng_dis NUMERIC,
+    eng_dis DOUBLE PRECISION,
     eng_conf TEXT
 );
 
@@ -24,9 +24,9 @@ CREATE TABLE IF NOT EXISTS trips (
     time NUMERIC NOT NULL,
     lat DOUBLE PRECISION NOT NULL,
     long DOUBLE PRECISION NOT NULL,
-    speed NUMERIC,
+    speed DOUBLE PRECISION,
     maf DOUBLE PRECISION,
-    rpm NUMERIC,
+    rpm DOUBLE PRECISION,
     abs_load DOUBLE PRECISION,
     oat REAL,
     fuel_rate REAL,
