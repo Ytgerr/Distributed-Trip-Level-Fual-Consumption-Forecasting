@@ -58,8 +58,8 @@ print("Preprocessing data...")
 
 static_data = pd.concat(
     [
-        pd.read_excel(data_folder / "VED_Static_Data_ICE&HEV.xlsx"),
-        pd.read_excel(data_folder / "VED_Static_Data_PHEV&EV.xlsx"),
+        pd.read_excel(data_folder / "VED_Static_Data_ICE&HEV.xlsx", engine="openpyxl"),
+        pd.read_excel(data_folder / "VED_Static_Data_PHEV&EV.xlsx", engine="openpyxl"),
     ]
 )
 
