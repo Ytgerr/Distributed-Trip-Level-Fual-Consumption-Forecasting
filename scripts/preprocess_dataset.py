@@ -1,5 +1,4 @@
 import pandas as pd
-from tqdm import tqdm
 
 from pathlib import Path
 import re
@@ -7,55 +6,55 @@ import os
 
 data_folder = Path("data")
 
-if (data_folder / "trips.csv").exists():
+if (data_folder / "vehicles.csv").exists():
     print("Preprocessed data detected, removing it...")
-    os.remove(data_folder / "trips.csv")
+    # os.remove(data_folder / "trips.csv")
     os.remove(data_folder / "vehicles.csv")
 else:
     print("Preprocessed data not detected")
 
-trips_df = None
+# trips_df = None
 
-trips_mapper = {
-    "DayNum": "daynum",
-    "Trip": "tripid",
-    "VehId": "vehid",
-    "Timestamp(ms)": "time",
-    "Latitude[deg]": "lat",
-    "Longitude[deg]": "long",
-    "Vehicle Speed[km/h]": "speed",
-    "MAF[g/sec]": "maf",
-    "Engine RPM[RPM]": "rpm",
-    "Absolute Load[%]": "abs_load",
-    "OAT[DegC]": "oat",
-    "Fuel Rate[L/hr]": "fuel_rate",
-    "Air Conditioning Power[kW]": "air_cp_kw",
-    "Air Conditioning Power[Watts]": "air_cp_watts",
-    "Heater Power[Watts]": "heater_power",
-    "HV Battery Current[A]": "hv_battery_current",
-    "HV Battery SOC[%]": "hv_battery_soc",
-    "HV Battery Voltage[V]": "hv_battery_vol",
-    "Short Term Fuel Trim Bank 1[%]": "stfb_1",
-    "Short Term Fuel Trim Bank 2[%]": "stfb_2",
-    "Long Term Fuel Trim Bank 1[%]": "ltfb_1",
-    "Long Term Fuel Trim Bank 2[%]": "ltfb_2",
-}
+# trips_mapper = {
+#     "DayNum": "daynum",
+#     "Trip": "tripid",
+#     "VehId": "vehid",
+#     "Timestamp(ms)": "time",
+#     "Latitude[deg]": "lat",
+#     "Longitude[deg]": "long",
+#     "Vehicle Speed[km/h]": "speed",
+#     "MAF[g/sec]": "maf",
+#     "Engine RPM[RPM]": "rpm",
+#     "Absolute Load[%]": "abs_load",
+#     "OAT[DegC]": "oat",
+#     "Fuel Rate[L/hr]": "fuel_rate",
+#     "Air Conditioning Power[kW]": "air_cp_kw",
+#     "Air Conditioning Power[Watts]": "air_cp_watts",
+#     "Heater Power[Watts]": "heater_power",
+#     "HV Battery Current[A]": "hv_battery_current",
+#     "HV Battery SOC[%]": "hv_battery_soc",
+#     "HV Battery Voltage[V]": "hv_battery_vol",
+#     "Short Term Fuel Trim Bank 1[%]": "stfb_1",
+#     "Short Term Fuel Trim Bank 2[%]": "stfb_2",
+#     "Long Term Fuel Trim Bank 1[%]": "ltfb_1",
+#     "Long Term Fuel Trim Bank 2[%]": "ltfb_2",
+# }
 
 print("Preprocessing data...")
 
-for weekly_trips_file in tqdm(data_folder.glob("*.csv")):
-    try:
-        df = pd.read_csv(weekly_trips_file)
+# for weekly_trips_file in tqdm(data_folder.glob("*.csv")):
+#     try:
+#         df = pd.read_csv(weekly_trips_file)
 
-        trips = df.rename(columns=trips_mapper)
+#         trips = df.rename(columns=trips_mapper)
 
-        if trips_df is None:
-            trips_df = trips
-        else:
-            trips_df = pd.concat([trips_df, trips])
+#         if trips_df is None:
+#             trips_df = trips
+#         else:
+#             trips_df = pd.concat([trips_df, trips])
 
-    except Exception:
-        print("Skipping {}".format(str(weekly_trips_file)))
+#     except Exception:
+#         print("Skipping {}".format(str(weekly_trips_file)))
 
 static_data = pd.concat(
     [
@@ -103,8 +102,7 @@ vehicles_df = process_static_data(static_data)
 
 print("Loading data into csv files..")
 
-trips_df.to_csv(data_folder / "trips.csv", index=False, na_rep="null")
+# trips_df.to_csv(data_folder / "trips.csv", index=False, na_rep="null")
 vehicles_df.to_csv(data_folder / "vehicles.csv", index=False, na_rep="null")
 
-
-print("Done! Total of {} entries for trips".format(len(trips_df)))
+print("Done with {} vehicles detected in dataset!".format(len(vehicles_df)))
