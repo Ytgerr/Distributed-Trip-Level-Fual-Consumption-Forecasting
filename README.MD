@@ -14,3 +14,22 @@ This repository is a template for the final project of big data course. It conta
 **Important Note:** You cannot change the content of the script `main.sh` since it will be used for assessment purposes.
 
 **Another Note:** The notebooks in `notebooks/` folder are used only for learning purposes since you need to put all Python scripts of the pipeline in `scripts/` folder. During the assessment, the grader can delete the folder `notebooks/` to check that your pipeline does not depend on its content.
+
+## Stage 2: Data Science EDA
+
+Stage 2 covers data understanding, EDA, feature analysis, chart generation, and trip-level feature engineering.
+
+Main files:
+
+- `scripts/stage2.sh` — runs Stage 2 Spark EDA pipeline.
+- `scripts/stage2_spark_eda.py` — Spark EDA and trip-level feature engineering.
+- `scripts/build_stage2_charts.py` — generates EDA figures from Stage 2 CSV outputs.
+- `docs/stage2_data_story.md` — data story with EDA figures.
+- `docs/stage2_dashboard.md` — static dashboard with generated figures.
+
+Outputs after running Stage 2:
+
+- HDFS Parquet: `/user/team15/project/analytics`
+- HDFS CSV: `/user/team15/project/analytics_csv`
+- Local CSV: `output/eda`
+- Local figures: `output/figures`
