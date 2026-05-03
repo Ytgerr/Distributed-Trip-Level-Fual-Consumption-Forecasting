@@ -1,1 +1,1 @@
-psycopg2-binary
+psycopg2-binarymatplotlib<3.4
