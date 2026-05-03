@@ -174,3 +174,12 @@ cython_debug/
 .pypirc
 
 secrets*
+
+# project local artifacts
+data/
+secrets/
+output/
+*.log
+
+# local spark/hive metastore
+metastore_db/
