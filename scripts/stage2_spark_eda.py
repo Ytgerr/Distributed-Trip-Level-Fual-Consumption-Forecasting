@@ -102,8 +102,8 @@ spark = SparkSession.builder.appName(SPARK_APP_NAME).getOrCreate()
 
 spark.sparkContext.setLogLevel(SPARK_LOG_LEVEL)
 
-vehicles_raw = spark.read.parquet("{WAREHOUSE}/vehicles")
-trips_raw = spark.read.parquet("{WAREHOUSE}/trips")
+vehicles_raw = spark.read.parquet(f"{WAREHOUSE}/vehicles")
+trips_raw = spark.read.parquet(f"{WAREHOUSE}/trips")
 
 raw_trip_columns_count = len(trips_raw.columns)
 raw_vehicle_columns_count = len(vehicles_raw.columns)
