@@ -1,8 +1,12 @@
-import pandas as pd
+"""
+Preprocesses dataset for Stage I
+"""
 
 from pathlib import Path
 import re
 import os
+
+import pandas as pd
 
 data_folder = Path("data")
 
@@ -65,6 +69,7 @@ static_data = pd.concat(
 
 
 def convert_l(string: str):
+    "Converts strings with 3.0L -like format into floats"
     dis = re.findall(r"(\d\.\d)L", string)
     conf = re.sub(r"\d\.\dL", "", string).strip()
     if len(dis) == 0:
@@ -75,6 +80,7 @@ def convert_l(string: str):
 
 
 def process_static_data(dataframe: pd.DataFrame) -> pd.DataFrame:
+    "Processes static vehicles data"
     dataframe["eng_dis"] = dataframe["Engine Configuration & Displacement"].apply(
         lambda x: convert_l(x)[0]
     )
@@ -105,4 +111,4 @@ print("Loading data into csv files..")
 # trips_df.to_csv(data_folder / "trips.csv", index=False, na_rep="null")
 vehicles_df.to_csv(data_folder / "vehicles.csv", index=False, na_rep="null")
 
-print("Done with {} vehicles detected in dataset!".format(len(vehicles_df)))
+print(f"Done with {len(vehicles_df)} vehicles detected in dataset!")
