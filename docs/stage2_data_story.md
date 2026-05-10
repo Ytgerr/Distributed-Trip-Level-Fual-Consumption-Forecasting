@@ -38,6 +38,8 @@ The missingness chart shows that fuel and energy-related fields are sparse. This
 
 ![Missingness by feature](figures/stage2/01_missingness_by_feature.png)
 
+Direct fuel_rate is missing for most records, while speed and rpm are almost fully available, so the model should rely on stable driving-behavior features and use MAF-based fuel approximation where needed.
+
 Source file:
 
 `output/eda/eda_missingness.csv`
@@ -47,6 +49,8 @@ Source file:
 The dataset contains ICE, HEV, and records with missing vehicle type. Vehicle type is important because fuel and energy behavior differs across powertrain technologies.
 
 ![Vehicle type distribution](figures/stage2/02_vehicle_type_distribution.png)
+
+ICE trips dominate the dataset, so model results may be biased toward conventional vehicles, while HEV and missing-type records should be handled carefully as smaller groups.
 
 Source file:
 
@@ -58,6 +62,8 @@ ICE vehicles have a higher average fuel-rate profile than HEV vehicles. This sup
 
 ![Fuel rate by vehicle type](figures/stage2/03_fuel_by_vehicle_type.png)
 
+ICE vehicles have the highest average fuel rate, HEV vehicles are lower, and missing-type records are the lowest, so vehicle type is a strong feature for explaining fuel behavior.
+
 Source file:
 
 `output/eda/insight_02_fuel_by_vehicle_type.csv`
@@ -67,6 +73,8 @@ Source file:
 Fuel rate changes across speed regimes. Distance alone is not enough to explain consumption; speed profile should also be included.
 
 ![Fuel rate by speed bin](figures/stage2/04_fuel_by_speed_bin.png)
+
+Fuel rate stays relatively stable at low and medium speeds, but rises sharply in high-speed bins, so speed profile is an important predictor of fuel consumption behavior.
 
 Source file:
 
@@ -78,6 +86,8 @@ Stop-go, city, normal, and highway regimes have different fuel-rate profiles. Th
 
 ![Driving mode vs fuel](figures/stage2/05_driving_mode_vs_fuel.png)
 
+Highway driving has the highest fuel-rate intensity, while stop-go mode has the lowest L/h value; therefore, driving mode should be included as a key behavioral feature, but L/h should not be confused with L/100km efficiency.
+
 Source file:
 
 `output/eda/insight_04_stop_go_vs_fuel.csv`
@@ -87,6 +97,8 @@ Source file:
 Outside air temperature is related to AC and heater usage. Environmental context can influence fuel and energy consumption.
 
 ![Temperature, HVAC and fuel](figures/stage2/06_temperature_hvac_fuel.png)
+
+Heater usage is highest at low temperatures, AC usage increases at high temperatures, and fuel rate rises at temperature extremes, so outside temperature and HVAC load should be included as environmental features.
 
 Source file:
 
@@ -98,6 +110,8 @@ Engine displacement is associated with fuel-rate differences. It should be inter
 
 ![Engine displacement and fuel rate](figures/stage2/07_engine_displacement_fuel.png)
 
+Fuel rate generally increases with engine displacement, which suggests that engine size is an important static vehicle feature, although outliers show that driving conditions and vehicle type also matter.
+
 Source file:
 
 `output/eda/insight_06_engine_displacement_fuel.csv`
@@ -107,6 +121,8 @@ Source file:
 The trip-level sample shows how fuel consumption varies across trip distance. This helps validate trip-level aggregation and detect outliers.
 
 ![Trip distance vs fuel consumption](figures/stage2/08_trip_distance_vs_consumption.png)
+
+Short trips show much higher variability in fuel consumption, while longer trips are more stable and mostly stay in a lower L/100km range.
 
 Source file:
 
