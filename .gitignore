@@ -179,6 +179,7 @@ secrets*
 data/
 secrets/
 output/
+models/
 *.log
 
 # local spark/hive metastore
