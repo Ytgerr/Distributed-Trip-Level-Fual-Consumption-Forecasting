@@ -81,7 +81,7 @@ The Sqoop import uses:
 
 - Parquet format;
 - Snappy compression;
-- four mappers (`--m 4`).
+- one mapper (`--m 1`).
 
 ## How to run
 
