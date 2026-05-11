@@ -127,7 +127,7 @@ imputer = Imputer(
     outputCols=[f"{c}_imp" for c in existing_numeric],
     strategy="median",
 )
-imputed_numeric_cols = ["{c}_imp" for c in existing_numeric]
+imputed_numeric_cols = [f"{c}_imp" for c in existing_numeric]
 
 indexers = [
     StringIndexer(inputCol=c, outputCol=f"{c}_idx", handleInvalid="keep")
