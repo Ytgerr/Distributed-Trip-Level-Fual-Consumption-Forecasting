@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rm -rf output/warehouse
+rm -rf output/warehouse/trips output/warehouse/vehicles
 
 if [ -f "data/VED_171101_week.csv" ]; then
     echo "Dataset already Loaded.. Skipping this part"
