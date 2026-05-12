@@ -1,9 +1,5 @@
 # Scripts Directory
 
-## TL;DR
-
-This directory contains the executable Bash and Python scripts for the project pipeline. Run scripts from the repository root.
-
 Example:
 
 ```bash
