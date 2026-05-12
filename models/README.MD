@@ -1,9 +1,5 @@
 # Models Directory
 
-## TL;DR
-
-This directory stores local copies of trained Spark ML model artifacts downloaded from HDFS. Model folders are generated artifacts and should usually be recreated by running Stage 3.
-
 ## Current models
 
 The current training pipeline is:
