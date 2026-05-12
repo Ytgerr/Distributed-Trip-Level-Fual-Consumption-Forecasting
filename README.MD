@@ -1,7 +1,5 @@
 # Distributed Trip-Level Fuel Consumption Forecasting
 
-## TL;DR
-
 This repository contains an end-to-end distributed data pipeline for trip-level fuel-consumption analytics and forecasting from large-scale Vehicle Energy Dataset telemetry.
 
 The pipeline downloads and audits raw data, ingests it into PostgreSQL and HDFS, builds Spark-based EDA and trip-level features, runs storage/processing benchmarks, performs feature selection, trains Spark ML regression models, and prepares Hive/Superset dashboard tables.
