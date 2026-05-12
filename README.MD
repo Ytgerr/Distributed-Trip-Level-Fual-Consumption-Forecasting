@@ -104,13 +104,13 @@ bash scripts/stage3_train_models.sh
 bash scripts/stage4.sh
 ```
 
-Legacy Stage 3 entrypoint:
+Legacy Stage 3 entrypoint (scripts/stage3.sh is deleted):
 
 ```bash
 bash scripts/stage3.sh
 ```
 
-`stage3.sh` runs the older two-model Spark ML pipeline. The current full pipeline uses `stage3_feature_selection.sh` and `stage3_train_models.sh` instead.
+`stage3.sh` runs the older two-model Spark ML pipeline, so it is deleted. The current full pipeline uses `stage3_feature_selection.sh` and `stage3_train_models.sh` instead.
 
 ## HDFS locations
 
