@@ -2,7 +2,7 @@
 
 This repository contains an end-to-end distributed data pipeline for trip-level fuel-consumption analytics and forecasting from large-scale Vehicle Energy Dataset telemetry.
 
-The pipeline downloads and audits raw data, ingests it into PostgreSQL and HDFS, builds Spark-based EDA and trip-level features, runs storage/processing benchmarks, performs feature selection, trains Spark ML regression models, and prepares Hive/Superset dashboard tables.
+The project covers raw data ingestion, PostgreSQL/HDFS storage, Spark-based EDA, trip-level feature engineering, engineering benchmarks, feature selection, Spark ML model training, and Apache Superset dashboard preparation.
 
 ## Dashboard
 
@@ -10,7 +10,7 @@ Published Apache Superset dashboard:
 
 <http://hadoop-03.uni.innopolis.ru:8808/superset/dashboard/221/>
 
-The dashboard is available from the IU Hadoop/Superset environment. It summarizes data quality, fleet composition, fuel-rate behavior, temperature/HVAC effects, engine-displacement effects, feature selection, model performance, benchmark results, and prediction examples.
+The dashboard is available from the IU Hadoop/Superset environment. It summarizes data quality, fleet composition, fuel-rate behavior, temperature/HVAC effects, engine-displacement effects, selected ML features, model performance, benchmark results, and prediction examples.
 
 ## Pipeline overview
 
@@ -23,26 +23,65 @@ The dashboard is available from the IU Hadoop/Superset environment. It summarize
 | Stage 2.5 | `scripts/stage2_data_profiling.sh` | Profile HDFS warehouse tables with Spark. | `output/profiling/*.csv`, `/user/team15/project/profiling`. |
 | Stage 2 | `scripts/stage2.sh` | Run Spark EDA and create trip-level analytical features. | `/user/team15/project/analytics`, `/user/team15/project/analytics_csv`, `output/eda`. |
 | Benchmarks | `scripts/benchmarks/run_storage_benchmark.sh`, `scripts/benchmarks/run_processing_benchmark.sh` | Compare storage formats and processing runtime. | `output/benchmarks/storage_benchmark.csv`, `output/benchmarks/processing_benchmark.csv`. |
-| Stage 3.5 | `scripts/stage3_feature_selection.sh` | Select predictive numeric features and create train/test splits. | `/user/team15/project/ml_prepared`, `output/feature_selection.csv`, `output/train_test_metadata.csv`. |
+| Stage 3.5 | `scripts/stage3_feature_selection.sh` | Select predictive features and create train/test splits. | `/user/team15/project/ml_prepared`, `output/feature_selection.csv`, `output/train_test_metadata.csv`. |
 | Stage 3.6 | `scripts/stage3_train_models.sh` | Train and evaluate three Spark ML regression models. | `models/model1..3`, `output/evaluation.csv`, `output/best_model.csv`, prediction CSVs. |
 | Stage 4 | `scripts/stage4.sh` | Upload dashboard-ready CSVs to HDFS and create Hive external tables. | `/user/team15/project/stage4`, `stage4_*` Hive tables. |
+
+## Current Stage 3 logic
+
+The current Stage 3 is split into two parts:
+
+1. feature selection and train/test preparation;
+2. training and evaluation of three Spark ML regression models.
+
+Current Stage 3 models:
+
+| Model | Role |
+|---|---|
+| `LinearRegression` | Simple interpretable baseline. |
+| `RandomForestRegressor` | Best current model by test RMSE. |
+| `GBTRegressor` | Additional non-linear tree-based benchmark. |
+
+Current best model:
+
+```text
+RandomForestRegressor
+```
+
+Current evaluation results:
+
+| Model | RMSE | MAE | R2 |
+|---|---:|---:|---:|
+| LinearRegression | 1.9562 | 1.0059 | 0.7804 |
+| RandomForestRegressor | 1.3968 | 0.7564 | 0.8881 |
+| GBTRegressor | 1.4696 | 0.7656 | 0.8762 |
+
+## Legacy Stage 3 note
+
+During the presentation, an earlier Stage 3 version was used: it trained two models and did not include the current feature-selection step. Some legacy files are intentionally kept in the repository to make the before/after comparison clear and to allow checking the previous modeling approach.
+
+Legacy files should not be used as the main pipeline. The current pipeline uses:
+
+```bash
+bash scripts/stage3_feature_selection.sh
+bash scripts/stage3_train_models.sh
+```
 
 ## Repository structure
 
 ```text
 .
-├── data/                  # Local raw data placeholders and small ML split samples
+├── data/                  # Local raw data placeholders and generated vehicle metadata
 ├── docs/                  # Documentation, data story, benchmarking notes, figures
 │   └── figures/stage2/    # Report-ready Stage 2 figures
-├── models/                # Local Spark ML model artifacts copied from HDFS
+├── models/                # Local Spark ML model artifacts copied from HDFS when available
 ├── notebooks/             # Exploratory notebooks; not required for the automated pipeline
-├── output/                # Local generated reports, benchmarks, predictions, and evaluation files
+├── output/                # Local generated reports, benchmarks, model metrics, and samples
 ├── scripts/               # Bash and Python scripts for data, EDA, ML, benchmarks, dashboard prep
 │   └── benchmarks/        # Ingest, storage, processing, and ML benchmark scripts
 ├── sql/                   # PostgreSQL SQL and HiveQL external-table definitions
 ├── main.sh                # Runs the current full pipeline in stage order
 ├── requirements.txt       # Cluster-compatible Python dependencies
-├── pyproject.toml         # Local project metadata; keep aligned with cluster runtime
 └── README.MD              # Project overview and run instructions
 ```
 
@@ -104,14 +143,6 @@ bash scripts/stage3_train_models.sh
 bash scripts/stage4.sh
 ```
 
-Legacy Stage 3 entrypoint (scripts/stage3.sh is deleted):
-
-```bash
-bash scripts/stage3.sh
-```
-
-`stage3.sh` runs the older two-model Spark ML pipeline, so it is deleted. The current full pipeline uses `stage3_feature_selection.sh` and `stage3_train_models.sh` instead.
-
 ## HDFS locations
 
 | Path | Description |
@@ -143,6 +174,8 @@ head output/model1_predictions.csv
 head output/model2_predictions.csv
 head output/model3_predictions.csv
 ```
+
+Large prediction files and Spark model directories may be omitted from the archived repository. They can be regenerated by rerunning Stage 3 on the cluster.
 
 ## Documentation
 

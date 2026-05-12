@@ -1,30 +1,197 @@
-# Documentation Directory
+# Stage 3: Feature Selection and Spark ML Modeling
 
-This directory contains project documentation, data stories, benchmark notes, dashboard notes, and report-ready figures.
+## TL;DR
 
-## Files
+Stage 3 predicts trip-level fuel consumption in `L/100km`. The current pipeline first runs feature selection and train/test splitting, then trains three Spark ML regressors with cross-validation: Linear Regression, Random Forest, and Gradient-Boosted Trees.
 
-| File | Description |
-|---|---|
-| `stage1_data_ingestion.md` | Stage 1 documentation: data download, raw-data audit, PostgreSQL schema, Sqoop import, and validation. |
-| `stage2_data_story.md` | Stage 2 EDA story with dashboard-ready insights and figures. |
-| `stage3_ml_modeling.md` | Stage 3 documentation: feature selection, train/test split, Spark ML models, outputs, and evaluation. |
-| `stage4_dashboard.md` | Stage 4 documentation: dashboard-ready CSV uploads, Hive external tables, and Superset usage. |
-| `benchmarking.md` | Benchmark documentation for ingest, storage, processing, and ML experiments. |
-| `repository_structure_review.md` | Review of repository structure, inconsistencies, and recommended cleanup actions. |
+The current best model is `RandomForestRegressor`.
 
-## Figures
+## Goal
 
-Stage 2 report figures are stored in:
+The target variable is:
 
 ```text
-docs/figures/stage2/
+fuel_l_per_100km
 ```
 
-These images mirror generated EDA figures and are used by `stage2_data_story.md`.
+The model predicts trip-level fuel consumption from trip behavior, vehicle metadata, and environmental features created in Stage 2.
 
-## Dashboard link
+## Current Stage 3 flow
 
-Published Superset dashboard:
+| Step | Script | Responsibility |
+|---|---|---|
+| Stage 3.5 | `scripts/stage3_feature_selection.sh` | Runs feature selection and creates train/test Parquet datasets. |
+| Stage 3.5 Python | `scripts/stage3_feature_selection.py` | Uses `SelectKBest` with `mutual_info_regression` for numeric features; keeps categorical metadata. |
+| Stage 3.6 | `scripts/stage3_train_models.sh` | Trains three models, exports predictions, evaluation, CV results, and best-model metadata. |
+| Stage 3.6 Python | `scripts/stage3_train_models.py` | Builds Spark ML pipelines, runs 3-fold CV, evaluates on the test split, saves models and outputs. |
 
-<http://hadoop-03.uni.innopolis.ru:8808/superset/dashboard/221/>
+## Legacy note
+
+During the presentation, an earlier Stage 3 version was used. That version trained two models and did not include the current feature-selection step. Some legacy files are intentionally kept in the repository to make the before/after comparison possible and to support checking the previous modeling approach.
+
+The current pipeline is the source of truth for final results:
+
+```bash
+bash scripts/stage3_feature_selection.sh
+bash scripts/stage3_train_models.sh
+```
+
+Legacy files such as `scripts/stage3_spark_ml.py` should be treated as reference material, not as the main execution path.
+
+## Modeling pipeline
+
+The current Stage 3 logic is:
+
+1. load trip-level features from Stage 2;
+2. remove invalid rows and technical columns;
+3. select useful numeric features using mutual information;
+4. keep categorical vehicle metadata for model pipelines;
+5. create train/test Parquet datasets in HDFS;
+6. train three Spark ML regression models;
+7. evaluate models using RMSE, MAE, and R2;
+8. save the best model and dashboard-ready result files.
+
+## Models
+
+| Model index | Algorithm | Spark class | Local output |
+|---:|---|---|---|
+| 1 | Linear Regression | `LinearRegression` | `models/model1/` |
+| 2 | Random Forest Regressor | `RandomForestRegressor` | `models/model2/` |
+| 3 | Gradient-Boosted Trees Regressor | `GBTRegressor` | `models/model3/` |
+
+All models use 3-fold cross-validation with RMSE as the optimization metric.
+
+## Hyperparameter grids
+
+### Model 1: Linear Regression
+
+| Parameter | Values |
+|---|---|
+| `regParam` | `0.0`, `0.01`, `0.1` |
+| `elasticNetParam` | `0.0`, `0.5`, `1.0` |
+| `aggregationDepth` | `2`, `3`, `4` |
+
+### Model 2: Random Forest Regressor
+
+| Parameter | Values |
+|---|---|
+| `maxDepth` | `4`, `6`, `8` |
+| `numTrees` | `20`, `40`, `60` |
+| `subsamplingRate` | `0.7`, `0.85`, `1.0` |
+
+### Model 3: GBT Regressor
+
+| Parameter | Values |
+|---|---|
+| `maxDepth` | `3`, `4`, `5` |
+| `maxBins` | `32`, `64`, `128` |
+| `stepSize` | `0.03`, `0.05`, `0.1` |
+
+## Outputs
+
+### HDFS outputs
+
+```text
+/user/team15/project/ml_prepared/train
+/user/team15/project/ml_prepared/test
+/user/team15/project/ml_prepared/feature_selection.csv
+/user/team15/project/ml_prepared/train_test_metadata.csv
+/user/team15/project/models/model1
+/user/team15/project/models/model2
+/user/team15/project/models/model3
+/user/team15/project/output/model1_predictions
+/user/team15/project/output/model2_predictions
+/user/team15/project/output/model3_predictions
+/user/team15/project/output/evaluation.csv
+/user/team15/project/output/model_training_log.csv
+/user/team15/project/output/model_cv_results.csv
+/user/team15/project/output/best_model.csv
+/user/team15/project/output/specific_prediction.csv
+```
+
+### Local outputs
+
+```text
+output/feature_selection.csv
+output/train_test_metadata.csv
+models/model1/
+models/model2/
+models/model3/
+output/model1_predictions.csv
+output/model2_predictions.csv
+output/model3_predictions.csv
+output/evaluation.csv
+output/model_training_log.csv
+output/model_cv_results.csv
+output/best_model.csv
+output/specific_prediction.csv
+```
+
+Large local prediction files and Spark model folders may be omitted from the archived repository. They can be regenerated by rerunning Stage 3 on the cluster.
+
+## Results
+
+The current model evaluation is:
+
+| Model | RMSE | MAE | R2 |
+|---|---:|---:|---:|
+| LinearRegression | 1.9562 | 1.0059 | 0.7804 |
+| RandomForestRegressor | 1.3968 | 0.7564 | 0.8881 |
+| GBTRegressor | 1.4696 | 0.7656 | 0.8762 |
+
+The best model is:
+
+```text
+RandomForestRegressor
+```
+
+Best model configuration summary:
+
+```text
+numTrees = 60
+maxDepth = 8
+maxBins = 32
+subsamplingRate = 1.0
+```
+
+## Interpretation
+
+Linear Regression is a useful baseline because it is fast and interpretable. Tree-based models are more appropriate for tabular telemetry because fuel consumption depends on non-linear interactions between speed, engine load, vehicle type, temperature, and engine displacement.
+
+Random Forest is the best model in the current run. It has the lowest RMSE and MAE and the highest R2 among the three evaluated models.
+
+## How to run
+
+Current pipeline:
+
+```bash
+bash scripts/stage3_feature_selection.sh
+bash scripts/stage3_train_models.sh
+```
+
+## How to validate
+
+Check Stage 2 input:
+
+```bash
+hdfs dfs -ls /user/team15/project/analytics/trip_features
+```
+
+Check feature selection output:
+
+```bash
+cat output/feature_selection.csv
+cat output/train_test_metadata.csv
+hdfs dfs -ls /user/team15/project/ml_prepared
+```
+
+Check model outputs:
+
+```bash
+ls models/model1 models/model2 models/model3
+cat output/evaluation.csv
+cat output/best_model.csv
+head output/model1_predictions.csv
+head output/model2_predictions.csv
+head output/model3_predictions.csv
+```

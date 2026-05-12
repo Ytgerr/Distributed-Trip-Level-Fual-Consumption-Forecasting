@@ -1,5 +1,7 @@
 # Scripts Directory
 
+Run scripts from the repository root.
+
 Example:
 
 ```bash
@@ -31,11 +33,42 @@ bash main.sh
 | `stage3_train_models.sh` | Stage 3.6 | Trains Linear Regression, Random Forest, and GBT models. |
 | `stage4.sh` | Stage 4 | Uploads dashboard-ready CSVs and creates Hive external tables. |
 
-Legacy entrypoint:
+## Current Stage 3 logic
+
+Current Stage 3 is intentionally split into two scripts:
+
+```bash
+bash scripts/stage3_feature_selection.sh
+bash scripts/stage3_train_models.sh
+```
+
+It trains three models:
+
+```text
+LinearRegression
+RandomForestRegressor
+GBTRegressor
+```
+
+The current best model is:
+
+```text
+RandomForestRegressor
+```
+
+There is no need to run `scripts/stage3.sh` for the final pipeline.
+
+## Legacy Stage 3 note
+
+During the presentation, an earlier Stage 3 version was used. It trained two models and did not include feature selection. Some legacy files are kept for comparison and verification of the previous approach.
+
+Legacy script:
 
 | Script | Description |
 |---|---|
-| `stage3.sh` | Older two-model Stage 3 pipeline using `stage3_spark_ml.py`. Kept for compatibility only. |
+| `stage3_spark_ml.py` | Older two-model Spark ML implementation. Kept as reference material only. |
+
+The legacy logic should not be used as the main final pipeline.
 
 ## Stage 1 helper scripts
 
@@ -62,7 +95,7 @@ Legacy entrypoint:
 |---|---|
 | `stage3_feature_selection.py` | Runs `SelectKBest(mutual_info_regression)` for numeric features and writes train/test Parquet datasets. |
 | `stage3_train_models.py` | Trains three Spark ML regression models with 3-fold cross-validation. |
-| `stage3_spark_ml.py` | Legacy two-model Spark ML script. |
+| `stage3_spark_ml.py` | Legacy two-model Spark ML script without the current feature-selection step. |
 
 ## Benchmark scripts
 
