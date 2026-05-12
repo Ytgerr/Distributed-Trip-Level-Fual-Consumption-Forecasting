@@ -1,9 +1,5 @@
 # Output Directory
 
-## TL;DR
-
-This directory stores local generated artifacts: audits, profiling CSVs, EDA exports, figures, benchmark results, model predictions, and evaluation files. Most files here are reproducible outputs, not source code.
-
 ## Stage 1 outputs
 
 | Path | Description |
