@@ -81,12 +81,3 @@ bash scripts/stage3_feature_selection.sh
 bash scripts/stage3_train_models.sh
 bash scripts/stage4.sh
 ```
-
-## Tracking policy
-
-Recommended policy:
-
-- commit this `README.MD`;
-- commit only small, intentional snapshot outputs if required;
-- do not commit large generated artifacts;
-- regenerate outputs from scripts whenever possible.
