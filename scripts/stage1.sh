@@ -1,30 +1,17 @@
 #!/bin/bash
+set -euo pipefail
 
-rm -rf output/warehouse/trips output/warehouse/vehicles
+echo "Stage 1.1 - Prepare raw data"
+bash scripts/stage1_prepare_data.sh
 
-if [ -f "data/VED_171101_week.csv" ]; then
-    echo "Dataset already Loaded.. Skipping this part"
-else
-    echo "Downloading Dataset from Yandex Disk..."
-    bash scripts/data_collection.sh
-fi
+echo "Stage 1.2 - Raw data audit"
+rm -rf data/sample
+python3 scripts/stage1_data_audit.py
 
-if [ -f "data/vehicles.csv" ]; then
-    echo "Data already preprocessed.. Skipping this part"
-else
-    echo "Preprocessing Data abount Vehicles..."
-    python scripts/preprocess_dataset.py
-fi
+echo "Stage 1.3 - Ingest benchmark on sample"
+bash scripts/benchmarks/run_ingest_benchmark.sh
 
-echo "Building Database in PostgreSQL server..."
-python scripts/build_projectdb.py
+echo "Stage 1.4 - Final PostgreSQL + Sqoop ingest"
+bash scripts/stage1_final_ingest.sh
 
-password=$(head -n 1 secrets/.psql.pass)
-
-hdfs dfs -rm -r -f project/warehouse
-
-echo "Importing All Tables to HDFS! (This may take some time..)"
-sqoop import-all-tables --connect jdbc:postgresql://hadoop-04.uni.innopolis.ru/team15_projectdb --username team15 --password $password --compression-codec=snappy --compress --as-parquetfile --warehouse-dir=project/warehouse --m 1
-
-echo "Copying data from HDFS"
-hdfs dfs -copyToLocal project/warehouse output
+echo "Stage 1 completed."
