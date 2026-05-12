@@ -1,163 +1,201 @@
-# Stage 3: Predictive Data Analytics with Spark ML
+# Stage 3: Feature Selection and Spark ML Modeling
+
+## TL;DR
+
+Stage 3 predicts trip-level fuel consumption in `L/100km`. The current pipeline first runs feature selection and train/test splitting, then trains three Spark ML regressors with cross-validation: Linear Regression, Random Forest, and Gradient-Boosted Trees.
 
 ## Goal
 
-Stage 3 trains distributed regression models for trip-level fuel-consumption forecasting. The target variable is:
+The target variable is:
 
 ```text
 fuel_l_per_100km
 ```
 
-The model predicts fuel consumption in liters per 100 km from trip-level driving, vehicle, and environmental features created in Stage 2.
+The model predicts trip-level fuel consumption from trip behavior, vehicle metadata, and environmental features created in Stage 2.
+
+## Current Stage 3 flow
+
+| Step | Script | Responsibility |
+|---|---|---|
+| Stage 3.5 | `scripts/stage3_feature_selection.sh` | Runs feature selection and creates train/test Parquet datasets. |
+| Stage 3.5 Python | `scripts/stage3_feature_selection.py` | Uses `SelectKBest` with `mutual_info_regression` for numeric features; keeps categorical metadata. |
+| Stage 3.6 | `scripts/stage3_train_models.sh` | Trains three models, exports predictions, evaluation, CV results, and best-model metadata. |
+| Stage 3.6 Python | `scripts/stage3_train_models.py` | Builds Spark ML pipelines, runs 3-fold CV, evaluates on the test split, saves models and outputs. |
+
+Legacy note: `scripts/stage3.sh` and `scripts/stage3_spark_ml.py` still exist as an older two-model pipeline. The current `main.sh` does not use them.
 
 ## Input
 
-Stage 3 reads the Stage 2 trip-level feature table from HDFS:
+Stage 3 reads the Stage 2 trip-level feature table:
 
 ```text
 /user/team15/project/analytics/trip_features
 ```
 
-This table contains one row per trip after aggregation by vehicle and trip identifiers.
+This table contains one row per aggregated trip.
 
-## Main scripts
+## Feature selection
 
-| Script | Responsibility |
-|---|---|
-| `scripts/stage3.sh` | Cleans old Stage 3 outputs, runs Spark ML on YARN, verifies local outputs. |
-| `scripts/stage3_spark_ml.py` | Builds the Spark ML pipeline, trains models, evaluates them, and exports results. |
+Numeric candidate features:
 
-## Feature groups
+```text
+duration_min, observed_seconds, distance_km,
+speed_mean, speed_median, speed_p95,
+stop_go_ratio, idle_time_min,
+maf_mean, maf_p95,
+rpm_mean, rpm_p95,
+abs_load_mean, oat_mean,
+hv_current_mean, hv_soc_mean, hv_voltage_mean,
+gen_weight, eng_dis
+```
 
-### Numeric features
+Feature-selection method:
 
-The current pipeline uses trip-level numeric features such as:
+```text
+SelectKBest(score_func=mutual_info_regression, k=10)
+```
 
-- trip duration and observed seconds;
-- distance in km;
-- mean, median, and p95 speed;
-- stop-go ratio and idle time;
-- MAF, RPM, engine-load statistics;
-- outside air temperature;
-- hybrid battery statistics;
-- vehicle weight and engine displacement.
+Categorical features are kept for Spark categorical encoding:
 
-### Categorical features
+```text
+vehtype, vehclass, transmission, drive_wheels, eng_type, eng_conf
+```
 
-Categorical vehicle metadata is encoded with `StringIndexer` and `OneHotEncoder`:
+Target and trip filters:
 
-- `vehtype`;
-- `vehclass`;
-- `transmission`;
-- `drive_wheels`;
-- `eng_type`;
-- `eng_conf`.
+- target must be non-null and positive;
+- target is filtered by approximate 1st and 99th percentiles;
+- `distance_km >= 0.5`;
+- `duration_min > 0`;
+- `0 <= speed_mean <= 160`.
 
-### Excluded leakage features
+Train/test split:
 
-The model intentionally avoids direct target-leakage fields such as:
-
-- `fuel_used_l`;
-- `fuel_rate_mean_lhr`;
-- `fuel_valid_points`.
-
-These fields are useful for analysis but should not be used as predictors when the target is derived from fuel consumption.
+```text
+70% train
+30% test
+random seed = 42
+```
 
 ## Preprocessing pipeline
 
-The Spark ML preprocessing pipeline performs:
+For each model, Spark ML performs:
 
-1. median imputation for numeric fields;
-2. string indexing for categorical fields;
-3. one-hot encoding for categorical indices;
-4. vector assembly into `features_raw`;
-5. standard scaling into `features`.
-
-The data is split into:
-
-```text
-70% training
-30% testing
-```
-
-with fixed random seed `42`.
+1. median imputation for numeric columns;
+2. `StringIndexer(handleInvalid="keep")` for categorical columns;
+3. `OneHotEncoder` for categorical features;
+4. `VectorAssembler` into `raw_features`;
+5. optional `StandardScaler` for Linear Regression;
+6. model training and prediction.
 
 ## Models
 
-| Model | Spark class | Output folder |
-|---|---|---|
-| Model 1 | `LinearRegression` | `models/model1/` |
-| Model 2 | `GBTRegressor` | `models/model2/` |
+| Model index | Algorithm | Spark class | Local output |
+|---:|---|---|---|
+| 1 | Linear Regression | `LinearRegression` | `models/model1/` |
+| 2 | Random Forest Regressor | `RandomForestRegressor` | `models/model2/` |
+| 3 | Gradient-Boosted Trees Regressor | `GBTRegressor` | `models/model3/` |
 
-Both models are selected using cross-validation and grid search on the training split only.
+All models use 3-fold cross-validation with RMSE as the optimization metric.
 
-## Hyperparameter tuning
+## Hyperparameter grids
 
-### Linear Regression
+### Model 1: Linear Regression
 
-Tuned parameters:
+| Parameter | Values |
+|---|---|
+| `regParam` | `0.0`, `0.01`, `0.1` |
+| `elasticNetParam` | `0.0`, `0.5`, `1.0` |
+| `aggregationDepth` | `2`, `3`, `4` |
 
-- `elasticNetParam`: `0.0`, `0.5`, `1.0`;
-- `regParam`: `0.01`, `0.1`, `1.0`.
+### Model 2: Random Forest Regressor
 
-### GBT Regressor
+| Parameter | Values |
+|---|---|
+| `maxDepth` | `4`, `6`, `8` |
+| `numTrees` | `20`, `40`, `60` |
+| `subsamplingRate` | `0.7`, `0.85`, `1.0` |
 
-Tuned parameters:
+### Model 3: GBT Regressor
 
-- `maxDepth`: `3`, `5`;
-- `stepSize`: `0.05`, `0.1`.
-
-Cross-validation:
-
-```text
-numFolds = 3
-optimization metric = RMSE
-```
+| Parameter | Values |
+|---|---|
+| `maxDepth` | `3`, `4`, `5` |
+| `maxBins` | `32`, `64`, `128` |
+| `stepSize` | `0.03`, `0.05`, `0.1` |
 
 ## Outputs
 
 ### HDFS outputs
 
 ```text
-project/data/train
-project/data/test
-project/models/model1
-project/models/model2
-project/output/model1_predictions
-project/output/model2_predictions
-project/output/evaluation
+/user/team15/project/ml_prepared/train
+/user/team15/project/ml_prepared/test
+/user/team15/project/ml_prepared/feature_selection.csv
+/user/team15/project/ml_prepared/train_test_metadata.csv
+/user/team15/project/models/model1
+/user/team15/project/models/model2
+/user/team15/project/models/model3
+/user/team15/project/output/model1_predictions
+/user/team15/project/output/model2_predictions
+/user/team15/project/output/model3_predictions
+/user/team15/project/output/evaluation.csv
+/user/team15/project/output/model_training_log.csv
+/user/team15/project/output/model_cv_results.csv
+/user/team15/project/output/best_model.csv
+/user/team15/project/output/specific_prediction.csv
 ```
 
 ### Local outputs
 
 ```text
-data/train.json
-data/test.json
+output/feature_selection.csv
+output/train_test_metadata.csv
 models/model1/
 models/model2/
+models/model3/
 output/model1_predictions.csv
 output/model2_predictions.csv
+output/model3_predictions.csv
 output/evaluation.csv
+output/model_training_log.csv
+output/model_cv_results.csv
+output/best_model.csv
+output/specific_prediction.csv
 ```
 
-## Results
+## Current snapshot note
 
-The current `output/evaluation.csv` contains:
+The archived repository currently includes an older `output/evaluation.csv` with two models only:
 
 | Model | RMSE | MAE | R2 |
-|-------|------|-----|----|
-| LinearRegression (numFeatures=66) | 2.1483 | 1.1333 | 0.7545 |
-| GBTRegression (numTrees=50, numFeatures=66) | 1.0352 | 0.5222 | 0.9430 |
+|---|---:|---:|---:|
+| Linear Regression | 2.1483 | 1.1333 | 0.7545 |
+| GBT Regressor | 1.0352 | 0.5222 | 0.9430 |
 
-At the time of this repository snapshot, the GBT model has lower error and higher R2 than the Linear Regression model. This means the non-linear model captures trip-level fuel-consumption patterns better than the linear baseline.
+After running the current `main.sh` or the current Stage 3.5/3.6 scripts, the expected evaluation output should contain three models: Linear Regression, Random Forest, and GBT. Treat the committed two-model CSV as a legacy snapshot, not as the final output format of the current pipeline.
 
 ## Interpretation
 
-Linear Regression is a useful baseline because it is simple, fast, and interpretable. However, fuel consumption depends on non-linear interactions between speed regime, engine load, temperature, vehicle type, and engine displacement. Gradient-Boosted Trees usually fit this type of tabular telemetry problem better because they can model non-linear thresholds and feature interactions without manually specifying them.
+Linear Regression is a useful baseline because it is fast and interpretable. Tree-based models are more appropriate for tabular telemetry because fuel consumption depends on non-linear interactions between speed, engine load, vehicle type, temperature, and engine displacement.
+
+The best model is selected by minimum test RMSE and written to:
+
+```text
+output/best_model.csv
+```
 
 ## How to run
 
-From the repository root:
+Current pipeline:
+
+```bash
+bash scripts/stage3_feature_selection.sh
+bash scripts/stage3_train_models.sh
+```
+
+Legacy two-model pipeline:
 
 ```bash
 bash scripts/stage3.sh
@@ -165,25 +203,27 @@ bash scripts/stage3.sh
 
 ## How to validate
 
-Check that Stage 2 input exists:
+Check Stage 2 input:
 
 ```bash
 hdfs dfs -ls /user/team15/project/analytics/trip_features
 ```
 
-Check generated local outputs:
+Check feature selection output:
 
 ```bash
-ls models/model1 models/model2
-cat output/evaluation.csv
-head output/model1_predictions.csv
-head output/model2_predictions.csv
+cat output/feature_selection.csv
+cat output/train_test_metadata.csv
+hdfs dfs -ls /user/team15/project/ml_prepared
 ```
 
-Check HDFS outputs:
+Check model outputs:
 
 ```bash
-hdfs dfs -ls project/models/model1
-hdfs dfs -ls project/models/model2
-hdfs dfs -ls project/output/evaluation
+ls models/model1 models/model2 models/model3
+cat output/evaluation.csv
+cat output/best_model.csv
+head output/model1_predictions.csv
+head output/model2_predictions.csv
+head output/model3_predictions.csv
 ```

@@ -1,10 +1,21 @@
-# Stage 1: Data Collection and Ingestion
+# Stage 1: Data Collection, Audit, and Ingestion
+
+## TL;DR
+
+Stage 1 prepares the raw Vehicle Energy Dataset, audits local files, loads PostgreSQL tables, benchmarks sample ingest, and imports the final `vehicles` and `trips` tables into HDFS as Parquet.
 
 ## Goal
 
-Stage 1 builds the storage foundation for the project. It collects the raw Vehicle Energy Dataset files, prepares vehicle metadata, loads data into PostgreSQL, and imports the PostgreSQL tables into HDFS with Sqoop.
+The goal of Stage 1 is to create a reliable distributed storage layer for later Spark processing.
 
-The goal is to make the raw dataset available as distributed Parquet files for later Spark processing.
+Stage 1 converts raw local files into:
+
+```text
+/user/team15/project/warehouse/vehicles
+/user/team15/project/warehouse/trips
+```
+
+These HDFS outputs are the main inputs for Stage 2 and profiling.
 
 ## Inputs
 
@@ -12,29 +23,33 @@ The goal is to make the raw dataset available as distributed Parquet files for l
 |---|---|---|
 | Raw VED telemetry CSV files | `data/*_week.csv` | Sensor-level trip records. |
 | Static vehicle metadata spreadsheets | `data/VED_Static_Data_ICE&HEV.xlsx`, `data/VED_Static_Data_PHEV&EV.xlsx` | Vehicle type, class, weight, engine, and drivetrain metadata. |
-| PostgreSQL password | `secrets/.psql.pass` | Required for loading data into `team15_projectdb`. |
+| PostgreSQL password | `secrets/.psql.pass` | Password used for PostgreSQL and Sqoop connection. |
 
 ## Main scripts
 
 | Script | Responsibility |
 |---|---|
-| `scripts/data_collection.sh` | Downloads and unpacks the raw dataset into `data/`. |
-| `scripts/preprocess_dataset.py` | Creates cleaned `data/vehicles.csv` from static metadata spreadsheets. |
-| `scripts/build_projectdb.py` | Creates PostgreSQL tables and loads CSV files into PostgreSQL. |
-| `scripts/stage1.sh` | Runs the complete Stage 1 workflow and imports PostgreSQL tables to HDFS via Sqoop. |
+| `scripts/stage1.sh` | Orchestrates complete Stage 1. |
+| `scripts/stage1_prepare_data.sh` | Downloads raw data if missing and generates `data/vehicles.csv` if missing. |
+| `scripts/data_collection.sh` | Downloads and unpacks raw VED files. |
+| `scripts/preprocess_dataset.py` | Converts static vehicle spreadsheets into cleaned `data/vehicles.csv`. |
+| `scripts/stage1_data_audit.py` | Audits downloaded local files and writes `output/data_audit.csv`. |
+| `scripts/benchmarks/run_ingest_benchmark.sh` | Creates a 100k-row sample and benchmarks ingest operations. |
+| `scripts/stage1_final_ingest.sh` | Builds PostgreSQL tables and imports them to HDFS with Sqoop. |
+| `scripts/build_projectdb.py` | Executes SQL and loads CSV files into PostgreSQL. |
 
 ## PostgreSQL schema
 
-Stage 1 creates two main tables.
+Stage 1 creates two main PostgreSQL tables.
 
 ### `vehicles`
 
-Each row describes one vehicle.
+One row describes one vehicle.
 
-Main fields:
+Important fields:
 
 - `vehid` — vehicle identifier and primary key;
-- `vehtype` — powertrain type, for example ICE or HEV;
+- `vehtype` — powertrain type;
 - `vehclass` — vehicle class;
 - `transmission`;
 - `drive_wheels`;
@@ -45,12 +60,12 @@ Main fields:
 
 ### `trips`
 
-Each row describes one telemetry timestamp inside a trip.
+One row describes one telemetry timestamp inside a trip.
 
-Main fields:
+Important fields:
 
-- trip identifiers: `daynum`, `vehid`, `tripid`, `time`;
-- geospatial fields: `lat`, `long`;
+- identifiers: `daynum`, `vehid`, `tripid`, `time`;
+- location: `lat`, `long`;
 - driving signals: `speed`, `maf`, `rpm`, `abs_load`, `oat`;
 - fuel and HVAC signals: `fuel_rate`, `air_cp_kw`, `air_cp_watts`, `heater_power`;
 - hybrid battery signals: `hv_battery_current`, `hv_battery_soc`, `hv_battery_vol`;
@@ -60,15 +75,14 @@ A foreign-key constraint links `trips.vehid` to `vehicles.vehid`.
 
 ## Processing flow
 
-1. `stage1.sh` checks whether raw VED files already exist.
-2. If data is missing, it calls `scripts/data_collection.sh`.
-3. If `data/vehicles.csv` is missing, it calls `scripts/preprocess_dataset.py`.
-4. `scripts/build_projectdb.py` runs:
-   - `sql/create_tables.sql`;
-   - `sql/import_data.sql`;
-   - `sql/test_database.sql`.
-5. Sqoop imports all PostgreSQL tables into HDFS as compressed Parquet files.
-6. A local copy of the HDFS warehouse is saved under `output/warehouse/`.
+1. `stage1_prepare_data.sh` checks whether raw data exists.
+2. If raw data is missing, it calls `data_collection.sh`.
+3. If `data/vehicles.csv` is missing, it calls `preprocess_dataset.py`.
+4. `stage1_data_audit.py` writes file-level audit metrics to `output/data_audit.csv`.
+5. `run_ingest_benchmark.sh` benchmarks sample ingest on `data/sample/trips_sample_100k.csv`.
+6. `stage1_final_ingest.sh` calls `build_projectdb.py` to create and populate PostgreSQL tables.
+7. Sqoop imports PostgreSQL tables into HDFS as Parquet with Snappy compression.
+8. A local copy of the HDFS warehouse is copied to `output/warehouse/`.
 
 ## HDFS output
 
@@ -77,15 +91,22 @@ A foreign-key constraint links `trips.vehid` to `vehicles.vehid`.
 /user/team15/project/warehouse/trips
 ```
 
-The Sqoop import uses:
+Sqoop configuration:
 
-- Parquet format;
-- Snappy compression;
-- one mapper (`--m 1`).
+| Table | Format | Compression | Mappers | Split |
+|---|---|---|---|---|
+| `vehicles` | Parquet | Snappy | 1 | none |
+| `trips` | Parquet | Snappy | 4 | `vehid` |
+
+## Local outputs
+
+```text
+output/data_audit.csv
+output/benchmarks/ingest_benchmark.csv
+output/warehouse/
+```
 
 ## How to run
-
-From the repository root:
 
 ```bash
 bash scripts/stage1.sh
@@ -98,9 +119,11 @@ Check local data:
 ```bash
 ls data
 head data/vehicles.csv
+cat output/data_audit.csv
+cat output/benchmarks/ingest_benchmark.csv
 ```
 
-Check PostgreSQL loading through the script output or manually through SQL:
+Check PostgreSQL:
 
 ```sql
 SELECT * FROM vehicles LIMIT 10;
