@@ -165,16 +165,16 @@ output/best_model.csv
 output/specific_prediction.csv
 ```
 
-## Current snapshot note
+## Resilts
 
-The archived repository currently includes an older `output/evaluation.csv` with two models only:
+The archived repository currently includes an older `output/evaluation.csv` with three models:
 
 | Model | RMSE | MAE | R2 |
 |---|---:|---:|---:|
-| Linear Regression | 2.1483 | 1.1333 | 0.7545 |
-| GBT Regressor | 1.0352 | 0.5222 | 0.9430 |
+| Linear Regression | 1.9562 | 1.0059 | 0.7804 |
+| Random Forest Regressor | 1.3968 | 0.7564 | 0.8882 |
+| GBT Regressor | 1.4696 | 0.7656 | 0.8762 |
 
-After running the current `main.sh` or the current Stage 3.5/3.6 scripts, the expected evaluation output should contain three models: Linear Regression, Random Forest, and GBT. Treat the committed two-model CSV as a legacy snapshot, not as the final output format of the current pipeline.
 
 ## Interpretation
 

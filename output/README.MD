@@ -63,8 +63,6 @@ trip_features_sample.csv
 | `best_model.csv` | Best model selected by minimum RMSE. |
 | `specific_prediction.csv` | One prediction example from the best model. |
 
-Snapshot note: this archive currently contains an older two-model `evaluation.csv`. Rerun current Stage 3 to produce the full current output set.
-
 ## How to regenerate
 
 ```bash
