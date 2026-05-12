@@ -1,7 +1,5 @@
 # Documentation Directory
 
-## TL;DR
-
 This directory contains project documentation, data stories, benchmark notes, dashboard notes, and report-ready figures.
 
 ## Files
