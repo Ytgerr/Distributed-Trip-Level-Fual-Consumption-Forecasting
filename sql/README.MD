@@ -1,9 +1,5 @@
 # SQL Directory
 
-## TL;DR
-
-This directory contains PostgreSQL SQL and HiveQL scripts used to build database tables and expose Spark/HDFS outputs to Hive/Superset.
-
 ## PostgreSQL scripts
 
 | File | Used by | Description |
